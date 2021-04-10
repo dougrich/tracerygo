@@ -103,7 +103,7 @@ func TestEvaluate(t *testing.T) {
 				"hello ",
 				Substitution{
 					Variables: []Lookup{
-						{"myWorld", "world2"},
+						{"myWorld", []interface{}{Substitution{Key:"world2"}}},
 					},
 					Key: "world",
 				},
@@ -139,7 +139,7 @@ func TestEvaluate(t *testing.T) {
 	t.Run("substitution with global variables", func(t *testing.T) {
 		result := Node{
 			Variables: []Lookup{
-				{"myWorld", "world2"},
+				{"myWorld", []interface{}{Substitution{Key:"world2"}}},
 			},
 			Parts: []interface{}{
 				"hello ",

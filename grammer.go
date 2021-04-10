@@ -13,7 +13,7 @@ type Node struct {
 
 type Lookup struct {
 	Key   string
-	Value string
+	Parts []interface{}
 }
 
 type Substitution struct {
@@ -73,7 +73,7 @@ func (e *Evaluation) clone(out io.Writer, lookups []Lookup) *Evaluation {
 			sube.Lookup[k] = v
 		}
 		for _, v := range lookups {
-			varn := sube.EvaluateLookup(v.Value)
+			varn := Node{Parts: v.Parts}
 			var sb strings.Builder
 			t := sube.out
 			sube.out = &sb
