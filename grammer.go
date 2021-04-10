@@ -7,7 +7,8 @@ import (
 )
 
 type Node struct {
-	Parts []interface{}
+	Variables []Lookup
+	Parts     []interface{}
 }
 
 type Lookup struct {
@@ -50,7 +51,7 @@ func WithRandom(rand *rand.Rand) EvaluationModifier {
 	}
 }
 
-func (e *Evaluation) clone(out io.Writer, lookups map[string]Node) *Evaluation {
+func (e *Evaluation) clone(out io.Writer, lookups []Lookup) *Evaluation {
 	// shortcut if we're cloning but don't actually make any changes
 	if out == nil && lookups == nil {
 		return e
@@ -66,13 +67,19 @@ func (e *Evaluation) clone(out io.Writer, lookups map[string]Node) *Evaluation {
 		sube.out = out
 	}
 
-	if lookups != nil {
+	if len(lookups) != 0 {
 		sube.Lookup = make(map[string][]Node)
 		for k, v := range e.Lookup {
 			sube.Lookup[k] = v
 		}
-		for k, v := range lookups {
-			sube.Lookup[k] = []Node{v}
+		for _, v := range lookups {
+			varn := sube.EvaluateLookup(v.Value)
+			var sb strings.Builder
+			t := sube.out
+			sube.out = &sb
+			sube.Evaluate(varn)
+			sube.Lookup[v.Key] = []Node{{Parts: []interface{}{sb.String()}}}
+			sube.out = t
 		}
 	}
 
@@ -80,6 +87,9 @@ func (e *Evaluation) clone(out io.Writer, lookups map[string]Node) *Evaluation {
 }
 
 func (e *Evaluation) Evaluate(n Node) {
+	if len(n.Variables) != 0 {
+		e = e.clone(nil, n.Variables)
+	}
 	for _, abstract := range n.Parts {
 		switch v := abstract.(type) {
 		case string:
@@ -87,7 +97,6 @@ func (e *Evaluation) Evaluate(n Node) {
 		case Substitution:
 			var pipe io.Writer
 			var modifiers []Modifier
-			var variables map[string]Node
 			n := e.EvaluateLookup(v.Key)
 
 			if len(v.Modifiers) != 0 {
@@ -99,19 +108,7 @@ func (e *Evaluation) Evaluate(n Node) {
 				}
 			}
 
-			if len(v.Variables) != 0 {
-				variables = make(map[string]Node)
-				for _, variable := range v.Variables {
-					// fully evaluate the variable now and cache the result
-					varn := e.EvaluateLookup(variable.Value)
-					var sb strings.Builder
-					sube := e.clone(&sb, variables)
-					sube.Evaluate(varn)
-					variables[variable.Key] = Node{Parts: []interface{}{sb.String()}}
-				}
-			}
-
-			sube := e.clone(pipe, variables)
+			sube := e.clone(pipe, v.Variables)
 			sube.Evaluate(n)
 
 			for _, m := range modifiers {

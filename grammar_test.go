@@ -136,4 +136,47 @@ func TestEvaluate(t *testing.T) {
 			assert.Equal(t, "hello world and world", sb.String())
 		}
 	})
+	t.Run("substitution with global variables", func(t *testing.T) {
+		result := Node{
+			Variables: []Lookup{
+				{"myWorld", "world2"},
+			},
+			Parts: []interface{}{
+				"hello ",
+				Substitution{
+					Key: "world",
+				},
+				", and ",
+				Substitution{
+					Key: "world",
+				},
+			},
+		}
+		var sb strings.Builder
+		ctx, err := NewEvaluation(&sb)
+		ctx.Lookup["world"] = []Node{
+			{
+				Parts: []interface{}{
+					Substitution{
+						Key: "myWorld",
+					},
+					" and ",
+					Substitution{
+						Key: "myWorld",
+					},
+				},
+			},
+		}
+		ctx.Lookup["world2"] = []Node{
+			{
+				Parts: []interface{}{
+					"world",
+				},
+			},
+		}
+		if assert.Nil(t, err) {
+			ctx.Evaluate(result)
+			assert.Equal(t, "hello world and world, and world and world", sb.String())
+		}
+	})
 }
