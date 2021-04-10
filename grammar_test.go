@@ -2,6 +2,7 @@ package tracerygo
 
 import (
 	"math"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,6 +148,64 @@ func TestEvaluate(t *testing.T) {
 			next: func() uint64 { return math.MaxUint64 },
 		}
 		result = origin.evaluate(&ctx)
+		assert.Equal(t, "Behind me a stone wall flowed through the stone wall, filling me with merriment", result)
+	})
+}
+
+func TestParse(t *testing.T) {
+	var n node
+	var err error
+	
+	n, err = parse("532")
+	assert.Nil(t, err)
+	assert.Equal(t, stringNode("532"), n)
+	
+	n, err = parse("#test# substitution")
+	assert.Nil(t, err)
+	assert.Equal(t, formatNode{
+		format: "%s substitution",
+		children: []node{
+			variableNode{ "test" },
+		},
+	}, n)
+
+	/*
+	this needs to be updated to properly handle checking
+	n, err = parse("#test.a# substitution")
+	assert.Nil(t, err)
+	assert.Equal(t, formatNode{
+		format: "%s substitution",
+		children: []node{
+			modifierNode{
+				root: variableNode{ "test" },
+				modifier: modifierIndefiniteArticle,
+			},
+		},
+	}, n)*/
+}
+
+func TestE2E(t *testing.T) {
+	t.Run("landscape_ez", func (t *testing.T) {
+		g := grammar{
+			"origin": []string{ "#line#"},
+			"line": []string{ "#mood.capitalize# and #mood#, the #path# was #mood# with #substance#", "#nearby.capitalize# #path.a# #move.ed# through the #path#, filling me with #substance#" },
+			"nearby": []string{ "beyond the #path#", "far away", "ahead", "behind me" },
+			"substance": []string{ "light", "reflections", "mist", "shadow", "darkness", "brightness", "gaiety", "merriment"},
+			"mood": []string{ "overcast", "alight", "clear", "darkened", "blue", "shadowed", "illuminated", "silver", "cool", "warm", "summer-warmed" },
+			"path": []string{ "stream", "brook", "path", "ravine", "forest", "fence", "stone wall"},
+			"move": []string{ "spiral", "twirl", "curl", "dance", "twine", "weave", "meander", "wander", "flow" },
+		}
+
+		n, err := parseGrammar(g)
+		assert.Nil(t, err)
+		if n == nil {
+			t.Fatalf("need a valid node")
+		}
+		log.Printf("%v", n)
+		ctx := evaluationContext{
+			next: func() uint64 { return math.MaxUint64 },
+		}
+		result := n.evaluate(&ctx)
 		assert.Equal(t, "Behind me a stone wall flowed through the stone wall, filling me with merriment", result)
 	})
 }

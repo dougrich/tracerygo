@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"errors"
 )
 
 var (
@@ -103,6 +104,7 @@ func (e *evaluationContext) clone() *evaluationContext {
 		variables: make(map[string]string),
 	}
 	for k, v := range e.variables {
+		
 		e2.variables[k] = v
 	}
 	return &e2
@@ -111,4 +113,123 @@ func (e *evaluationContext) clone() *evaluationContext {
 func (e *evaluationContext) choose(len int) int {
 	n := e.next()
 	return int(float64(len) * 0.99999999999 * float64(n) / (float64(math.MaxUint64)))
+}
+
+type variableLocation struct {
+	start int
+	end int
+}
+
+func parse(input string) (node, error) {
+	if input[0] == '[' {
+		// scan for the end input
+		next := strings.IndexOf(input, "]")
+		if next == -1 {
+			return nil, errors.New("String substitution started; but missing end")
+		}
+		variableDeclarationPhrase := input[1:next]
+		variableDeclarations := strings.Split(variableDeclarationPhrase, ",")
+		n, err := parse(input[next+1:])
+		if err != nil {
+			return err
+		}
+		for _, v := variableDeclarations {
+			
+		}
+	}
+	var variables []variableLocation
+	startSubstitution := -1
+
+	for i, r := range input {
+		switch r {
+		case '#':
+			if startSubstitution == -1 {
+				startSubstitution = i		
+			} else {
+				variables = append(variables, variableLocation{ startSubstitution, i })
+				startSubstitution = -1
+			}
+		}
+	}
+
+	if len(variables) == 0 {
+		return stringNode(input), nil
+	}
+
+	last := 0
+	format := ""
+	children := make([]node, len(variables))
+	var errs []error
+	for i, v := range variables {
+		format += input[last:v.start]
+		format += "%s"
+		last = v.end + 1
+		name := input[v.start+1:v.end]
+		mods := strings.Split(name, ".")
+
+		var n node = variableNode{ mods[0] }
+		for _, key := range mods[1:] {
+			switch key {
+			case "a":
+				n = modifierNode{ root: n, modifier: modifierIndefiniteArticle }
+			case "capitalize":
+				n = modifierNode{ root: n, modifier: modifierCapitalize }
+			case "ed":
+				n = modifierNode{ root: n, modifier: modifierPastTense }
+			default:
+				errs = append(errs, errors.New("Unrecognized modifier"))
+			}
+		}
+		children[i] = n
+		
+	}
+	if errs != nil {
+		return nil, errors.New("Errors occured!")
+	}
+	format += input[last:]
+	return formatNode{
+		format,
+		children,
+	}, nil
+}
+
+func parseArray(arr []string) (node, error) {
+	var n arrayNode
+	for _, s := range arr {
+		nc, err := parse(s)
+		if err != nil {
+			return nil, err
+		}
+		n = append(n, nc)
+	}
+	return n, nil
+}
+
+type grammar map[string][]string
+
+func parseGrammar(g grammar) (node, error) {
+	n, err := parse(g["origin"][0])
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range g {
+		if k == "origin" {
+			// skip over alternate origins
+			continue
+		}
+
+		a, err := parseArray(v)
+		if err != nil {
+			return nil, err
+		}
+
+		n = withVariableNode{
+			variableName: k,
+			variableNode: a,
+			child: n,
+		}
+	}
+
+	return n, nil
 }
