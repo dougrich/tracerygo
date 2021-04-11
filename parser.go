@@ -2,6 +2,7 @@ package tracerygo
 
 import (
 	"errors"
+	"strings"
 )
 
 var (
@@ -21,12 +22,25 @@ type variableDeclaration struct {
 
 func toNode(tokens []interface{}) (Node, error) {
 	n := Node{
-		Parts: nil,
+		Variables: nil,
+		Parts:     nil,
 	}
 	for _, v := range tokens {
 		switch v.(type) {
 		case string:
 			n.Parts = append(n.Parts, v)
+		case []variableDeclaration:
+			v := v.([]variableDeclaration)
+			for _, decl := range v {
+				subn, err := toNode(decl.subtokens)
+				if err != nil {
+					return n, err
+				}
+				n.Variables = append(n.Variables, Lookup{
+					Key:   decl.name,
+					Parts: subn.Parts,
+				})
+			}
 		case tokenLookup:
 			t := v.(tokenLookup)
 			s := Substitution{
@@ -64,4 +78,64 @@ func toNode(tokens []interface{}) (Node, error) {
 		}
 	}
 	return n, nil
+}
+
+func tokenize(input string) ([]interface{}, error) {
+	var parts []interface{}
+	inLookup := false
+	currentToken := ""
+	var variableDeclarations []variableDeclaration
+
+	for i := 0; i < len(input); i++ {
+		switch input[i] {
+		case '[':
+			// look ahead until we see the end, then break that string out to parse into a variable declaration
+			for k := i + 1; k < len(input); k++ {
+				switch input[k] {
+				case ']':
+					segments := strings.SplitN(input[i+1:k], ":", 2)
+					name := segments[0]
+					subparts, err := tokenize(segments[1])
+					if err != nil {
+						return nil, err
+					}
+					variableDeclarations = append(variableDeclarations, variableDeclaration{
+						name,
+						subparts,
+					})
+					i = k
+				}
+			}
+			continue
+		case '#':
+			if inLookup {
+				inLookup = false
+				tokenParts := strings.Split(currentToken, ".")
+
+				parts = append(parts, tokenLookup{variableDeclarations, tokenParts[0], tokenParts[1:]})
+				variableDeclarations = nil
+			} else {
+				inLookup = true
+				if variableDeclarations != nil {
+					parts = append(parts, variableDeclarations)
+				}
+				if currentToken != "" {
+					parts = append(parts, currentToken)
+				}
+			}
+			currentToken = ""
+			variableDeclarations = nil
+			continue
+		}
+		currentToken += string(input[i])
+	}
+
+	if variableDeclarations != nil {
+		parts = append(parts, variableDeclarations)
+	}
+	if currentToken != "" {
+		parts = append(parts, currentToken)
+	}
+
+	return parts, nil
 }

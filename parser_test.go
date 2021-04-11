@@ -39,7 +39,7 @@ func TestToNode(t *testing.T) {
 
 	n, err = toNode([]interface{}{
 		"hello ",
-		tokenLookup{[]variableDeclaration{{"myworld", []interface{}{"cool ", tokenLookup{nil, "world", nil}}}}, "myworld", nil},
+		tokenLookup{[]variableDeclaration{{"myworld", []interface{}{"cool ", tokenLookup{nil, "world", []string{}}}}}, "myworld", nil},
 	})
 	assert.Nil(err)
 	assert.Equal(n, Node{
@@ -78,4 +78,97 @@ func TestToNode(t *testing.T) {
 			},
 		},
 	})
+
+	n, err = toNode([]interface{}{
+		[]variableDeclaration{
+			{
+				"neat",
+				[]interface{}{
+					tokenLookup{nil, "test", nil},
+				},
+			},
+		},
+		tokenLookup{nil, "world", []string{}},
+	})
+	assert.Nil(err)
+	assert.Equal(n, Node{
+		Variables: []Lookup{
+			{
+				"neat",
+				[]interface{}{
+					Substitution{
+						Variables: nil,
+						Modifiers: nil,
+						Key:       "test",
+					},
+				},
+			},
+		},
+		Parts: []interface{}{
+			Substitution{
+				Variables: nil,
+				Modifiers: nil,
+				Key:       "world",
+			},
+		},
+	})
+}
+
+func TestTokenize(t *testing.T) {
+	assert := assert.New(t)
+
+	parts, err := tokenize("red")
+	if assert.Nil(err) {
+		assert.Equal([]interface{}{"red"}, parts)
+	}
+
+	parts, err = tokenize("red #type#")
+	if assert.Nil(err) {
+		assert.Equal([]interface{}{"red ", tokenLookup{nil, "type", []string{}}}, parts)
+	}
+
+	parts, err = tokenize("red #type.a.b#")
+	if assert.Nil(err) {
+		assert.Equal([]interface{}{"red ", tokenLookup{nil, "type", []string{"a", "b"}}}, parts)
+	}
+
+	parts, err = tokenize("red #[myVar:#neat#]type#")
+	if assert.Nil(err) {
+		assert.Equal(
+			[]interface{}{
+				"red ",
+				tokenLookup{
+					[]variableDeclaration{
+						{
+							"myVar",
+							[]interface{}{tokenLookup{nil, "neat", []string{}}},
+						},
+					},
+					"type",
+					[]string{},
+				},
+			},
+			parts,
+		)
+	}
+
+	parts, err = tokenize("[myVar:#neat#]#type#")
+	if assert.Nil(err) {
+		assert.Equal(
+			[]interface{}{
+				[]variableDeclaration{
+					{
+						"myVar",
+						[]interface{}{tokenLookup{nil, "neat", []string{}}},
+					},
+				},
+				tokenLookup{
+					nil,
+					"type",
+					[]string{},
+				},
+			},
+			parts,
+		)
+	}
 }
