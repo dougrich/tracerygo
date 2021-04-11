@@ -127,6 +127,11 @@ func TestTokenize(t *testing.T) {
 		assert.Equal([]interface{}{"red ", tokenLookup{nil, "type", []string{}}}, parts)
 	}
 
+	parts, err = tokenize("red \\##type#")
+	if assert.Nil(err) {
+		assert.Equal([]interface{}{"red #", tokenLookup{nil, "type", []string{}}}, parts)
+	}
+
 	parts, err = tokenize("red #type.a.b#")
 	if assert.Nil(err) {
 		assert.Equal([]interface{}{"red ", tokenLookup{nil, "type", []string{"a", "b"}}}, parts)

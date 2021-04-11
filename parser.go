@@ -3,6 +3,7 @@ package tracerygo
 import (
 	"errors"
 	"strings"
+	"time"
 )
 
 var (
@@ -10,6 +11,16 @@ var (
 )
 
 type RawGrammar map[string][]string
+
+func (rawg RawGrammar) Evaluate(name string, index int) (string, error) {
+
+	g, err := Parse(rawg)
+	if err != nil {
+		return "", err
+	}
+
+	return g.SEvaluate("origin", 0, time.Now().UnixNano())
+}
 
 type tokenLookup struct {
 	prefixes []variableDeclaration
@@ -90,6 +101,12 @@ func tokenize(input string) ([]interface{}, error) {
 
 	for i := 0; i < len(input); i++ {
 		switch input[i] {
+		case '\\':
+			if input[i+1] == '#' {
+				currentToken += "#"
+				i = i + 1
+				continue
+			}
 		case '[':
 			// look ahead until we see the end, then break that string out to parse into a variable declaration
 			for k := i + 1; k < len(input); k++ {

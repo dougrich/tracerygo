@@ -1,10 +1,10 @@
 package tracerygo
 
 import (
+	"errors"
 	"io"
 	"math/rand"
 	"strings"
-	"errors"
 )
 
 type Node struct {
@@ -140,7 +140,7 @@ func (e *Evaluation) EvaluateLookup(name string) Node {
 
 type Grammar map[string][]Node
 
-func (g Grammar) FEvaluate(out io.Writer, name string, index int, seed int64) (error) {
+func (g Grammar) FEvaluate(out io.Writer, name string, index int, seed int64) error {
 	e, err := NewEvaluation(out, WithRandom(rand.New(rand.NewSource(seed))), WithGrammar(g))
 	if err != nil {
 		return err
