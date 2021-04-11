@@ -1,0 +1,43 @@
+{
+  "hashtag": [
+    "tracery",
+    "botally",
+    "fiction",
+    "games",
+    "ftw",
+    "literature",
+    "bobross",
+    "twitch",
+    "procjam",
+    "icids15",
+    "nanogenmo"
+  ],
+  "digit": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9"
+  ],
+  "emoji": [
+    "&\\#128169;",
+    "&\\#12816#digit#;",
+    "&\\#128#digit##digit##digit#;",
+    "&\\#128#digit##digit##digit#;",
+    "&\\#128#digit##digit##digit#;",
+    "&\\#128#digit##digit##digit#;"
+  ],
+  "imgURL": [
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Cucciolo_gatto_Bibo.jpg/1920px-Cucciolo_gatto_Bibo.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Young_cats.jpg/1920px-Young_cats.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/c/cf/Stray_kitten_Rambo001.jpg"
+  ],
+  "img": "<img src='#imgURL#' width=200 /><br>",
+  "style": "style=\"color:blue;display:inline-block;\"",
+  "origin": "<div #style#>#img# \\##hashtag# \\##hashtag# #emoji# #emoji# #emoji# #emoji#</div>"
+}
