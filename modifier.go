@@ -15,6 +15,16 @@ type Modifier interface {
 
 var (
 	ErrUnexpectedNumberOfBytesWritten = errors.New("Unexpected number of bytes written")
+	modifierMap                       = map[string]int{
+		"capitalize": ModifierCapitalizeIndex,
+		"ed":         ModifierPastTenseIndex,
+	}
+	ModifierCapitalizeIndex = 0
+	ModifierPastTenseIndex  = 1
+	modifierLookup          = []ModifierFunc{
+		ModifierCapitalize,
+		ModifierPastTense,
+	}
 )
 
 type capitalizePipe struct {

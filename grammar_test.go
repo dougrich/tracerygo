@@ -50,8 +50,8 @@ func TestEvaluate(t *testing.T) {
 			Parts: []interface{}{
 				"hello ",
 				Substitution{
-					Modifiers: []ModifierFunc{
-						ModifierCapitalize,
+					Modifiers: []int{
+						ModifierCapitalizeIndex,
 					},
 					Key: "world",
 				},
@@ -76,8 +76,8 @@ func TestEvaluate(t *testing.T) {
 			Parts: []interface{}{
 				"hello ",
 				Substitution{
-					Modifiers: []ModifierFunc{
-						ModifierPastTense,
+					Modifiers: []int{
+						ModifierPastTenseIndex,
 					},
 					Key: "world",
 				},
@@ -103,7 +103,7 @@ func TestEvaluate(t *testing.T) {
 				"hello ",
 				Substitution{
 					Variables: []Lookup{
-						{"myWorld", []interface{}{Substitution{Key:"world2"}}},
+						{"myWorld", []interface{}{Substitution{Key: "world2"}}},
 					},
 					Key: "world",
 				},
@@ -139,7 +139,7 @@ func TestEvaluate(t *testing.T) {
 	t.Run("substitution with global variables", func(t *testing.T) {
 		result := Node{
 			Variables: []Lookup{
-				{"myWorld", []interface{}{Substitution{Key:"world2"}}},
+				{"myWorld", []interface{}{Substitution{Key: "world2"}}},
 			},
 			Parts: []interface{}{
 				"hello ",

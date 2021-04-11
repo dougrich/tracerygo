@@ -18,7 +18,7 @@ type Lookup struct {
 
 type Substitution struct {
 	Variables []Lookup
-	Modifiers []ModifierFunc
+	Modifiers []int
 	Key       string
 }
 
@@ -103,7 +103,7 @@ func (e *Evaluation) Evaluate(n Node) {
 				modifiers = make([]Modifier, len(v.Modifiers))
 				pipe = e.out
 				for i, m := range v.Modifiers {
-					modifiers[i] = m(pipe)
+					modifiers[i] = modifierLookup[m](pipe)
 					pipe = modifiers[i]
 				}
 			}
