@@ -1,7 +1,9 @@
 package tracerygo
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -157,6 +159,36 @@ func tokenize(input string) ([]interface{}, error) {
 	}
 
 	return parts, nil
+}
+
+func (g *RawGrammar) UnmarshalJSON(data []byte) error {
+	intermediate := make(map[string]interface{})
+	local := make(RawGrammar)
+	if err := json.Unmarshal(data, &intermediate); err != nil {
+		return err
+	}
+
+	for k, intermediateValue := range intermediate {
+		switch v := intermediateValue.(type) {
+		case string:
+			local[k] = []string{v}
+		case []interface{}:
+			temparr := make([]string, len(v))
+			for i, s := range v {
+				switch subv := s.(type) {
+				case string:
+					temparr[i] = subv
+				default:
+					return fmt.Errorf("Error in field '%s': expected an array of strings, but element %d doesn't appear to be a string", k, i)
+				}
+			}
+			local[k] = temparr
+		default:
+			return fmt.Errorf("Error in field '%s': expected either a string or an array of strings", k)
+		}
+	}
+	*g = local
+	return nil
 }
 
 func Parse(g RawGrammar) (Grammar, error) {
