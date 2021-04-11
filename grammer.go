@@ -4,6 +4,7 @@ import (
 	"io"
 	"math/rand"
 	"strings"
+	"errors"
 )
 
 type Node struct {
@@ -34,7 +35,7 @@ func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) (*Evaluation,
 	e := &Evaluation{
 		out:    out,
 		rand:   nil,
-		Lookup: make(map[string][]Node),
+		Lookup: nil,
 	}
 	for _, m := range modifiers {
 		m(e)
@@ -42,12 +43,21 @@ func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) (*Evaluation,
 	if e.rand == nil {
 		e.rand = rand.New(rand.NewSource(0))
 	}
+	if e.Lookup == nil {
+		e.Lookup = make(map[string][]Node)
+	}
 	return e, nil
 }
 
 func WithRandom(rand *rand.Rand) EvaluationModifier {
 	return func(e *Evaluation) {
 		e.rand = rand
+	}
+}
+
+func WithGrammar(g Grammar) EvaluationModifier {
+	return func(e *Evaluation) {
+		e.Lookup = g
 	}
 }
 
@@ -126,4 +136,29 @@ func (e *Evaluation) EvaluateLookup(name string) Node {
 	}
 	i := e.rand.Intn(len(nodes))
 	return nodes[i]
+}
+
+type Grammar map[string][]Node
+
+func (g Grammar) FEvaluate(out io.Writer, name string, index int, seed int64) (error) {
+	e, err := NewEvaluation(out, WithRandom(rand.New(rand.NewSource(seed))), WithGrammar(g))
+	if err != nil {
+		return err
+	}
+	nodes, ok := g[name]
+	if !ok {
+		return errors.New("Key not found")
+	}
+	if index < 0 || index >= len(nodes) {
+		return errors.New("Index out of bounds")
+	}
+	n := nodes[index]
+	e.Evaluate(n)
+	return nil
+}
+
+func (g Grammar) SEvaluate(name string, index int, seed int64) (string, error) {
+	var sb strings.Builder
+	err := g.FEvaluate(&sb, name, index, seed)
+	return sb.String(), err
 }

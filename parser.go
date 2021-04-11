@@ -9,6 +9,8 @@ var (
 	ErrUnsupportedModifier = errors.New("Unsupported modifier")
 )
 
+type RawGrammar map[string][]string
+
 type tokenLookup struct {
 	prefixes []variableDeclaration
 	name     string
@@ -138,4 +140,25 @@ func tokenize(input string) ([]interface{}, error) {
 	}
 
 	return parts, nil
+}
+
+func Parse(g RawGrammar) (Grammar, error) {
+	final := make(Grammar)
+	for k, v := range g {
+		var nodes []Node
+		for _, raw := range v {
+			tokens, err := tokenize(raw)
+			if err != nil {
+				return final, err
+			}
+			node, err := toNode(tokens)
+			if err != nil {
+				return final, err
+			}
+			nodes = append(nodes, node)
+		}
+
+		final[k] = nodes
+	}
+	return final, nil
 }
