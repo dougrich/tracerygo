@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -83,7 +84,7 @@ func toNode(tokens []interface{}) (Node, error) {
 				for i, m := range t.suffixes {
 					modifier, ok := modifierMap[m]
 					if !ok {
-						return n, ErrUnsupportedModifier
+						return n, fmt.Errorf("in %s, unsupported modifier %s", "", m)
 					}
 					s.Modifiers[i] = modifier
 				}
@@ -101,19 +102,22 @@ func tokenize(input string) ([]interface{}, error) {
 	currentToken := ""
 	var variableDeclarations []variableDeclaration
 
+traversal:
 	for i := 0; i < len(input); i++ {
 		switch input[i] {
 		case '\\':
 			if input[i+1] == '#' {
 				currentToken += "#"
 				i = i + 1
-				continue
+				continue traversal
 			}
 		case '[':
 			// look ahead until we see the end, then break that string out to parse into a variable declaration
+			log.Printf("TRACE: lookahead started at %d", i)
 			for k := i + 1; k < len(input); k++ {
 				switch input[k] {
 				case ']':
+					log.Printf("TRACE: lookahead ended at %d, captured %s", i, input[i+1:k])
 					segments := strings.SplitN(input[i+1:k], ":", 2)
 					name := segments[0]
 					subparts, err := tokenize(segments[1])
@@ -125,9 +129,10 @@ func tokenize(input string) ([]interface{}, error) {
 						subparts,
 					})
 					i = k
+					continue traversal
 				}
 			}
-			continue
+			return parts, fmt.Errorf("Unmatched '[', started at %d", i)
 		case '#':
 			if inLookup {
 				inLookup = false
@@ -146,7 +151,8 @@ func tokenize(input string) ([]interface{}, error) {
 			}
 			currentToken = ""
 			variableDeclarations = nil
-			continue
+			// this is here to explicity skip the default behavior
+			continue traversal
 		}
 		currentToken += string(input[i])
 	}

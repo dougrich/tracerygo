@@ -19,15 +19,18 @@ var (
 		"capitalize": ModifierCapitalizeIndex,
 		"ed":         ModifierPastTenseIndex,
 		"a":          ModifierIndefiniteArticleIndex,
+		"s":          ModifierPluralizeIndex,
 	}
 	ModifierCapitalizeIndex        = 1
 	ModifierPastTenseIndex         = 2
 	ModifierIndefiniteArticleIndex = 3
+	ModifierPluralizeIndex         = 4
 	modifierLookup                 = []ModifierFunc{
 		nil,
 		ModifierCapitalize,
 		ModifierPastTense,
 		ModifierIndefiniteArticle,
+		ModifierPluralize,
 	}
 )
 
@@ -105,3 +108,19 @@ func (p *indefiniteArticlePipe) Write(b []byte) (int, error) {
 }
 
 func (p *indefiniteArticlePipe) Finalize() {}
+
+type pluralizePipe struct {
+	out io.Writer
+}
+
+func ModifierPluralize(out io.Writer) Modifier {
+	return &pluralizePipe{out: out}
+}
+
+func (p *pluralizePipe) Write(b []byte) (int, error) {
+	return p.out.Write(b)
+}
+
+func (p *pluralizePipe) Finalize() {
+	p.out.Write([]byte("s"))
+}

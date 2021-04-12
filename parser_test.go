@@ -116,8 +116,10 @@ func TestToNode(t *testing.T) {
 
 func TestTokenize(t *testing.T) {
 	assert := assert.New(t)
+	var parts []interface{}
+	var err error
 
-	parts, err := tokenize("red")
+	parts, err = tokenize("red")
 	if assert.Nil(err) {
 		assert.Equal([]interface{}{"red"}, parts)
 	}
@@ -170,6 +172,30 @@ func TestTokenize(t *testing.T) {
 				tokenLookup{
 					nil,
 					"type",
+					[]string{},
+				},
+			},
+			parts,
+		)
+	}
+
+	// this is an extract from the sci-fi example that caused an issue parsing
+	parts, err = tokenize("#[mcArt:#artForm#][mcBoss:#boss#]artPlot#")
+	if assert.Nil(err) {
+		assert.Equal(
+			[]interface{}{
+				tokenLookup{
+					[]variableDeclaration{
+						{
+							"mcArt",
+							[]interface{}{tokenLookup{nil, "artForm", []string{}}},
+						},
+						{
+							"mcBoss",
+							[]interface{}{tokenLookup{nil, "boss", []string{}}},
+						},
+					},
+					"artPlot",
 					[]string{},
 				},
 			},

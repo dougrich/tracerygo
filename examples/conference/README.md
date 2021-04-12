@@ -1,0 +1,1 @@
+Example was authored by Kate Compton, and taken from her exemplars on the tracery.io website.

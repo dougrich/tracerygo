@@ -10,3 +10,4 @@ fmt:
 	go build -o $@ ./examples/$(@F)
 
 all: $(addprefix ./bin/examples/, $(examples))
+	go test .
