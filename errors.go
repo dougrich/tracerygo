@@ -30,7 +30,7 @@ func (n NameNotFoundError) Error() string {
 }
 
 type UnsupportedModifierError struct {
-	Modifier  string
+	Modifier string
 }
 
 func (u UnsupportedModifierError) Error() string {
@@ -38,8 +38,8 @@ func (u UnsupportedModifierError) Error() string {
 }
 
 type ExpectationError struct {
-	Expected  string
-	Found     string
+	Expected string
+	Found    string
 }
 
 func (e ExpectationError) Error() string {
@@ -57,7 +57,7 @@ func (u UnmatchedSymbolError) Error() string {
 }
 
 type FieldError struct {
-	FieldName string
+	FieldName  string
 	Underlying error
 }
 

@@ -180,12 +180,12 @@ func (g *RawGrammar) UnmarshalJSON(data []byte) error {
 				case string:
 					temparr[i] = subv
 				default:
-					return FieldError{ fmt.Sprintf("%s[%d]", k, i), ExpectationError{ "a string", "something else"} }
+					return FieldError{fmt.Sprintf("%s[%d]", k, i), ExpectationError{"a string", "something else"}}
 				}
 			}
 			local[k] = temparr
 		default:
-			return FieldError{ k, ExpectationError{ "either an array of strings or a string", "something else"}}
+			return FieldError{k, ExpectationError{"either an array of strings or a string", "something else"}}
 		}
 	}
 	*g = local
@@ -199,11 +199,11 @@ func Parse(g RawGrammar) (Grammar, error) {
 		for i, raw := range v {
 			tokens, err := tokenize(raw)
 			if err != nil {
-				return final, FieldError{ fmt.Sprintf("%s[%d]", k, i), err }
+				return final, FieldError{fmt.Sprintf("%s[%d]", k, i), err}
 			}
 			node, err := toNode(tokens)
 			if err != nil {
-				return final, FieldError{ fmt.Sprintf("%s[%d]", k, i), err }
+				return final, FieldError{fmt.Sprintf("%s[%d]", k, i), err}
 			}
 			nodes = append(nodes, node)
 		}
