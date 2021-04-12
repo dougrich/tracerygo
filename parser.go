@@ -2,13 +2,8 @@ package tracerygo
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
-)
-
-var (
-	ErrUnsupportedModifier = errors.New("Unsupported modifier")
 )
 
 type RawGrammar map[string][]string
@@ -82,7 +77,7 @@ func toNode(tokens []interface{}) (Node, error) {
 				for i, m := range t.suffixes {
 					modifier, ok := modifierMap[m]
 					if !ok {
-						return n, fmt.Errorf("in %s, unsupported modifier %s", "", m)
+						return n, UnsupportedModifierError{m}
 					}
 					s.Modifiers[i] = modifier
 				}
@@ -96,7 +91,7 @@ func toNode(tokens []interface{}) (Node, error) {
 
 func tokenize(input string) ([]interface{}, error) {
 	var parts []interface{}
-	inLookup := false
+	inLookup := -1
 	currentToken := ""
 	var variableDeclarations []variableDeclaration
 
@@ -128,16 +123,16 @@ traversal:
 					continue traversal
 				}
 			}
-			return parts, fmt.Errorf("Unmatched '[', started at %d", i)
+			return parts, UnmatchedSymbolError{i, "[", "]"}
 		case '#':
-			if inLookup {
-				inLookup = false
+			if inLookup >= 0 {
+				inLookup = -1
 				tokenParts := strings.Split(currentToken, ".")
 
 				parts = append(parts, tokenLookup{variableDeclarations, tokenParts[0], tokenParts[1:]})
 				variableDeclarations = nil
 			} else {
-				inLookup = true
+				inLookup = i
 				if variableDeclarations != nil {
 					parts = append(parts, variableDeclarations)
 				}
@@ -151,6 +146,10 @@ traversal:
 			continue traversal
 		}
 		currentToken += string(input[i])
+	}
+
+	if inLookup >= 0 {
+		return nil, UnmatchedSymbolError{inLookup, "#", "#"}
 	}
 
 	if variableDeclarations != nil {
@@ -181,12 +180,12 @@ func (g *RawGrammar) UnmarshalJSON(data []byte) error {
 				case string:
 					temparr[i] = subv
 				default:
-					return fmt.Errorf("Error in field '%s': expected an array of strings, but element %d doesn't appear to be a string", k, i)
+					return FieldError{ fmt.Sprintf("%s[%d]", k, i), ExpectationError{ "a string", "something else"} }
 				}
 			}
 			local[k] = temparr
 		default:
-			return fmt.Errorf("Error in field '%s': expected either a string or an array of strings", k)
+			return FieldError{ k, ExpectationError{ "either an array of strings or a string", "something else"}}
 		}
 	}
 	*g = local
@@ -197,14 +196,14 @@ func Parse(g RawGrammar) (Grammar, error) {
 	final := make(Grammar)
 	for k, v := range g {
 		var nodes []Node
-		for _, raw := range v {
+		for i, raw := range v {
 			tokens, err := tokenize(raw)
 			if err != nil {
-				return final, err
+				return final, FieldError{ fmt.Sprintf("%s[%d]", k, i), err }
 			}
 			node, err := toNode(tokens)
 			if err != nil {
-				return final, err
+				return final, FieldError{ fmt.Sprintf("%s[%d]", k, i), err }
 			}
 			nodes = append(nodes, node)
 		}

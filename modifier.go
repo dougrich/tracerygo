@@ -10,7 +10,7 @@ type ModifierFunc func(io.Writer) Modifier
 
 type Modifier interface {
 	io.Writer
-	Finalize()
+	Finalize() error
 }
 
 var (
@@ -59,7 +59,9 @@ func (p *capitalizePipe) Write(b []byte) (int, error) {
 	}
 }
 
-func (p *capitalizePipe) Finalize() {}
+func (p *capitalizePipe) Finalize() error {
+	return nil
+}
 
 type pastTensePipe struct {
 	out io.Writer
@@ -73,8 +75,9 @@ func (p *pastTensePipe) Write(b []byte) (int, error) {
 	return p.out.Write(b)
 }
 
-func (p *pastTensePipe) Finalize() {
-	p.out.Write([]byte("ed"))
+func (p *pastTensePipe) Finalize() error {
+	_, err := p.out.Write([]byte("ed"))
+	return err
 }
 
 type indefiniteArticlePipe struct {
@@ -107,7 +110,9 @@ func (p *indefiniteArticlePipe) Write(b []byte) (int, error) {
 	}
 }
 
-func (p *indefiniteArticlePipe) Finalize() {}
+func (p *indefiniteArticlePipe) Finalize() error {
+	return nil
+}
 
 type pluralizePipe struct {
 	out io.Writer
@@ -121,6 +126,7 @@ func (p *pluralizePipe) Write(b []byte) (int, error) {
 	return p.out.Write(b)
 }
 
-func (p *pluralizePipe) Finalize() {
-	p.out.Write([]byte("s"))
+func (p *pluralizePipe) Finalize() error {
+	_, err := p.out.Write([]byte("s"))
+	return err
 }

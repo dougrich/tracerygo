@@ -106,18 +106,23 @@ func (e *Evaluation) clone(out io.Writer, lookups []Variable) *Evaluation {
 	return sube
 }
 
-func (e *Evaluation) Evaluate(n Node) {
+func (e *Evaluation) Evaluate(n Node) error {
 	if len(n.Variables) != 0 {
 		e = e.clone(nil, n.Variables)
 	}
 	for _, abstract := range n.Parts {
 		switch v := abstract.(type) {
 		case string:
-			e.out.Write([]byte(v))
+			if _, err := e.out.Write([]byte(v)); err != nil {
+				return StreamWriteError{err}
+			}
 		case Substitution:
 			var pipe io.Writer
 			var modifiers []Modifier
-			n := e.EvaluateName(v.Key)
+			n, err := e.EvaluateName(v.Key)
+			if err != nil {
+				return err
+			}
 
 			if len(v.Modifiers) != 0 {
 				modifiers = make([]Modifier, len(v.Modifiers))
@@ -129,33 +134,37 @@ func (e *Evaluation) Evaluate(n Node) {
 			}
 
 			sube := e.clone(pipe, v.Variables)
-			sube.Evaluate(n)
+			if err := sube.Evaluate(n); err != nil {
+				return err
+			}
 
 			for _, m := range modifiers {
-				m.Finalize()
+				if err := m.Finalize(); err != nil {
+					return err
+				}
 			}
 		default:
 		}
 	}
+	return nil
 }
 
-func (e *Evaluation) EvaluateName(name string) Node {
+func (e *Evaluation) EvaluateName(name string) (Node, error) {
 	nodes, ok := e.Grammar[name]
 	if !ok || len(nodes) == 0 {
 		// not found; do we have a lookup function?
 		if e.lookup != nil {
 			value, err := e.lookup(name)
 			if err != nil {
-				// TODO: gracefully handle evaluation errors
-				panic(err)
+				return Node{}, LookupError{name, err}
 			}
-			return Node{Parts: []interface{}{value}}
+			return Node{Parts: []interface{}{value}}, nil
 		} else {
-			return Node{Parts: []interface{}{"#" + name + "#"}}
+			return Node{}, NameNotFoundError{name}
 		}
 	}
 	i := e.rand.Intn(len(nodes))
-	return nodes[i]
+	return nodes[i], nil
 }
 
 type Grammar map[string][]Node
@@ -171,8 +180,7 @@ func (g Grammar) StreamingEvaluate(out io.Writer, name string, index int, seed i
 		return errors.New("Index out of bounds")
 	}
 	n := nodes[index]
-	e.Evaluate(n)
-	return nil
+	return e.Evaluate(n)
 }
 
 func (g Grammar) Evaluate(name string, index int, seed int64) (string, error) {
