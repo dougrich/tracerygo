@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 )
@@ -113,11 +112,9 @@ traversal:
 			}
 		case '[':
 			// look ahead until we see the end, then break that string out to parse into a variable declaration
-			log.Printf("TRACE: lookahead started at %d", i)
 			for k := i + 1; k < len(input); k++ {
 				switch input[k] {
 				case ']':
-					log.Printf("TRACE: lookahead ended at %d, captured %s", i, input[i+1:k])
 					segments := strings.SplitN(input[i+1:k], ":", 2)
 					name := segments[0]
 					subparts, err := tokenize(segments[1])
