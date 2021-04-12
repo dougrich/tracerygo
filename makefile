@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
 
-examples = art landscape webtest
+examples = art landscape webtest conference nightvale poem scifi
 
 .phony: fmt
 fmt:

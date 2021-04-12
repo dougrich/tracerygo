@@ -46,7 +46,7 @@ func TestToNode(t *testing.T) {
 		Parts: []interface{}{
 			"hello ",
 			Substitution{
-				Variables: []Lookup{
+				Variables: []Variable{
 					{
 						Key: "myworld",
 						Parts: []interface{}{
@@ -92,7 +92,7 @@ func TestToNode(t *testing.T) {
 	})
 	assert.Nil(err)
 	assert.Equal(n, Node{
-		Variables: []Lookup{
+		Variables: []Variable{
 			{
 				"neat",
 				[]interface{}{

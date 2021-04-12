@@ -8,34 +8,36 @@ import (
 )
 
 type Node struct {
-	Variables []Lookup
+	Variables []Variable
 	Parts     []interface{}
 }
 
-type Lookup struct {
+type Variable struct {
 	Key   string
 	Parts []interface{}
 }
 
 type Substitution struct {
-	Variables []Lookup
+	Variables []Variable
 	Modifiers []int
 	Key       string
 }
 
 type Evaluation struct {
-	Lookup map[string][]Node
-	rand   *rand.Rand
-	out    io.Writer
+	Grammar map[string][]Node
+	lookup  LookupFunction
+	rand    *rand.Rand
+	out     io.Writer
 }
 
 type EvaluationModifier func(*Evaluation)
 
-func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) (*Evaluation, error) {
+func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) *Evaluation {
 	e := &Evaluation{
-		out:    out,
-		rand:   nil,
-		Lookup: nil,
+		Grammar: nil,
+		lookup:  nil,
+		out:     out,
+		rand:    nil,
 	}
 	for _, m := range modifiers {
 		m(e)
@@ -43,10 +45,10 @@ func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) (*Evaluation,
 	if e.rand == nil {
 		e.rand = rand.New(rand.NewSource(0))
 	}
-	if e.Lookup == nil {
-		e.Lookup = make(map[string][]Node)
+	if e.Grammar == nil {
+		e.Grammar = make(map[string][]Node)
 	}
-	return e, nil
+	return e
 }
 
 func WithRandom(rand *rand.Rand) EvaluationModifier {
@@ -57,20 +59,28 @@ func WithRandom(rand *rand.Rand) EvaluationModifier {
 
 func WithGrammar(g Grammar) EvaluationModifier {
 	return func(e *Evaluation) {
-		e.Lookup = g
+		e.Grammar = g
 	}
 }
 
-func (e *Evaluation) clone(out io.Writer, lookups []Lookup) *Evaluation {
+type LookupFunction func(string) (string, error)
+
+func WithLookup(fn LookupFunction) EvaluationModifier {
+	return func(e *Evaluation) {
+		e.lookup = fn
+	}
+}
+
+func (e *Evaluation) clone(out io.Writer, lookups []Variable) *Evaluation {
 	// shortcut if we're cloning but don't actually make any changes
 	if out == nil && lookups == nil {
 		return e
 	}
 
 	sube := &Evaluation{
-		out:    e.out,
-		rand:   e.rand,
-		Lookup: e.Lookup,
+		out:     e.out,
+		rand:    e.rand,
+		Grammar: e.Grammar,
 	}
 
 	if out != nil {
@@ -78,9 +88,9 @@ func (e *Evaluation) clone(out io.Writer, lookups []Lookup) *Evaluation {
 	}
 
 	if len(lookups) != 0 {
-		sube.Lookup = make(map[string][]Node)
-		for k, v := range e.Lookup {
-			sube.Lookup[k] = v
+		sube.Grammar = make(map[string][]Node)
+		for k, v := range e.Grammar {
+			sube.Grammar[k] = v
 		}
 		for _, v := range lookups {
 			varn := Node{Parts: v.Parts}
@@ -88,7 +98,7 @@ func (e *Evaluation) clone(out io.Writer, lookups []Lookup) *Evaluation {
 			t := sube.out
 			sube.out = &sb
 			sube.Evaluate(varn)
-			sube.Lookup[v.Key] = []Node{{Parts: []interface{}{sb.String()}}}
+			sube.Grammar[v.Key] = []Node{{Parts: []interface{}{sb.String()}}}
 			sube.out = t
 		}
 	}
@@ -107,7 +117,7 @@ func (e *Evaluation) Evaluate(n Node) {
 		case Substitution:
 			var pipe io.Writer
 			var modifiers []Modifier
-			n := e.EvaluateLookup(v.Key)
+			n := e.EvaluateName(v.Key)
 
 			if len(v.Modifiers) != 0 {
 				modifiers = make([]Modifier, len(v.Modifiers))
@@ -129,10 +139,20 @@ func (e *Evaluation) Evaluate(n Node) {
 	}
 }
 
-func (e *Evaluation) EvaluateLookup(name string) Node {
-	nodes, ok := e.Lookup[name]
+func (e *Evaluation) EvaluateName(name string) Node {
+	nodes, ok := e.Grammar[name]
 	if !ok || len(nodes) == 0 {
-		return Node{Parts: []interface{}{"#" + name + "#"}}
+		// not found; do we have a lookup function?
+		if e.lookup != nil {
+			value, err := e.lookup(name)
+			if err != nil {
+				// TODO: gracefully handle evaluation errors
+				panic(err)
+			}
+			return Node{Parts: []interface{}{value}}
+		} else {
+			return Node{Parts: []interface{}{"#" + name + "#"}}
+		}
 	}
 	i := e.rand.Intn(len(nodes))
 	return nodes[i]
@@ -140,11 +160,9 @@ func (e *Evaluation) EvaluateLookup(name string) Node {
 
 type Grammar map[string][]Node
 
-func (g Grammar) FEvaluate(out io.Writer, name string, index int, seed int64) error {
-	e, err := NewEvaluation(out, WithRandom(rand.New(rand.NewSource(seed))), WithGrammar(g))
-	if err != nil {
-		return err
-	}
+func (g Grammar) StreamingEvaluate(out io.Writer, name string, index int, seed int64) error {
+	e := NewEvaluation(out, WithRandom(rand.New(rand.NewSource(seed))), WithGrammar(g))
+
 	nodes, ok := g[name]
 	if !ok {
 		return errors.New("Key not found")
@@ -157,8 +175,8 @@ func (g Grammar) FEvaluate(out io.Writer, name string, index int, seed int64) er
 	return nil
 }
 
-func (g Grammar) SEvaluate(name string, index int, seed int64) (string, error) {
+func (g Grammar) Evaluate(name string, index int, seed int64) (string, error) {
 	var sb strings.Builder
-	err := g.FEvaluate(&sb, name, index, seed)
+	err := g.StreamingEvaluate(&sb, name, index, seed)
 	return sb.String(), err
 }

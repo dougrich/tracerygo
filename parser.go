@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 )
 
 var (
@@ -14,14 +13,14 @@ var (
 
 type RawGrammar map[string][]string
 
-func (rawg RawGrammar) Evaluate(name string, index int) (string, error) {
+func (rawg RawGrammar) Evaluate(name string, index int, seed int64) (string, error) {
 
 	g, err := Parse(rawg)
 	if err != nil {
 		return "", err
 	}
 
-	return g.SEvaluate("origin", 0, time.Now().UnixNano())
+	return g.Evaluate("origin", 0, seed)
 }
 
 type tokenLookup struct {
@@ -51,7 +50,7 @@ func toNode(tokens []interface{}) (Node, error) {
 				if err != nil {
 					return n, err
 				}
-				n.Variables = append(n.Variables, Lookup{
+				n.Variables = append(n.Variables, Variable{
 					Key:   decl.name,
 					Parts: subn.Parts,
 				})
@@ -65,13 +64,13 @@ func toNode(tokens []interface{}) (Node, error) {
 			}
 
 			if len(t.prefixes) > 0 {
-				s.Variables = make([]Lookup, len(t.prefixes))
+				s.Variables = make([]Variable, len(t.prefixes))
 				for i, p := range t.prefixes {
 					n, err := toNode(p.subtokens)
 					if err != nil {
 						return n, err
 					}
-					s.Variables[i] = Lookup{
+					s.Variables[i] = Variable{
 						Key:   p.name,
 						Parts: n.Parts,
 					}

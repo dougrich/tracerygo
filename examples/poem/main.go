@@ -14,7 +14,7 @@ func main() {
 		log.Fatalf("Error unmarshalling JSON %v", err)
 	}
 
-	result, err := rawg.Evaluate("origin", 0)
+	result, err := rawg.Evaluate("origin", 0, 0)
 	if err != nil {
 		log.Fatalf("Error directly evaluating %v", err)
 	}

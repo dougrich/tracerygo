@@ -23,7 +23,7 @@ func main() {
 		log.Fatalf("Error parsing %v", err)
 	}
 
-	result, err := g.SEvaluate("origin", 0, time.Now().UnixNano())
+	result, err := g.Evaluate("origin", 0, time.Now().UnixNano())
 	if err != nil {
 		log.Fatalf("Error evaluation %v", err)
 	}

@@ -16,11 +16,9 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello world", sb.String())
-		}
+		ctx := NewEvaluation(&sb)
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello world", sb.String())
 	})
 	t.Run("substitution", func(t *testing.T) {
 		result := Node{
@@ -32,18 +30,16 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		ctx.Lookup["world"] = []Node{
+		ctx := NewEvaluation(&sb)
+		ctx.Grammar["world"] = []Node{
 			{
 				Parts: []interface{}{
 					"world",
 				},
 			},
 		}
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello world", sb.String())
-		}
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello world", sb.String())
 	})
 	t.Run("substitution with prefix odifier", func(t *testing.T) {
 		result := Node{
@@ -58,18 +54,16 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		ctx.Lookup["world"] = []Node{
+		ctx := NewEvaluation(&sb)
+		ctx.Grammar["world"] = []Node{
 			{
 				Parts: []interface{}{
 					"world",
 				},
 			},
 		}
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello World", sb.String())
-		}
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello World", sb.String())
 	})
 	t.Run("substitution with suffix modifier", func(t *testing.T) {
 		result := Node{
@@ -84,25 +78,23 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		ctx.Lookup["world"] = []Node{
+		ctx := NewEvaluation(&sb)
+		ctx.Grammar["world"] = []Node{
 			{
 				Parts: []interface{}{
 					"world",
 				},
 			},
 		}
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello worlded", sb.String())
-		}
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello worlded", sb.String())
 	})
 	t.Run("substitution with variables", func(t *testing.T) {
 		result := Node{
 			Parts: []interface{}{
 				"hello ",
 				Substitution{
-					Variables: []Lookup{
+					Variables: []Variable{
 						{"myWorld", []interface{}{Substitution{Key: "world2"}}},
 					},
 					Key: "world",
@@ -110,8 +102,8 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		ctx.Lookup["world"] = []Node{
+		ctx := NewEvaluation(&sb)
+		ctx.Grammar["world"] = []Node{
 			{
 				Parts: []interface{}{
 					Substitution{
@@ -124,21 +116,19 @@ func TestEvaluate(t *testing.T) {
 				},
 			},
 		}
-		ctx.Lookup["world2"] = []Node{
+		ctx.Grammar["world2"] = []Node{
 			{
 				Parts: []interface{}{
 					"world",
 				},
 			},
 		}
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello world and world", sb.String())
-		}
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello world and world", sb.String())
 	})
 	t.Run("substitution with global variables", func(t *testing.T) {
 		result := Node{
-			Variables: []Lookup{
+			Variables: []Variable{
 				{"myWorld", []interface{}{Substitution{Key: "world2"}}},
 			},
 			Parts: []interface{}{
@@ -153,8 +143,8 @@ func TestEvaluate(t *testing.T) {
 			},
 		}
 		var sb strings.Builder
-		ctx, err := NewEvaluation(&sb)
-		ctx.Lookup["world"] = []Node{
+		ctx := NewEvaluation(&sb)
+		ctx.Grammar["world"] = []Node{
 			{
 				Parts: []interface{}{
 					Substitution{
@@ -167,16 +157,14 @@ func TestEvaluate(t *testing.T) {
 				},
 			},
 		}
-		ctx.Lookup["world2"] = []Node{
+		ctx.Grammar["world2"] = []Node{
 			{
 				Parts: []interface{}{
 					"world",
 				},
 			},
 		}
-		if assert.Nil(t, err) {
-			ctx.Evaluate(result)
-			assert.Equal(t, "hello world and world, and world and world", sb.String())
-		}
+		ctx.Evaluate(result)
+		assert.Equal(t, "hello world and world, and world and world", sb.String())
 	})
 }
