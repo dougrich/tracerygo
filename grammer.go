@@ -7,31 +7,50 @@ import (
 	"strings"
 )
 
+// This represents a node in the evaluation tree
 type Node struct {
+	// An array of variable declarations that apply to this node and it's children
 	Variables []Variable
-	Parts     []interface{}
-}
-
-type Variable struct {
-	Key   string
+	// The parts to be evaluated; this is untyped but can contain strings, Substitutions, Evaluations, etc.
 	Parts []interface{}
 }
 
+// This represents a variable definition.
+type Variable struct {
+	// This is the key that can be used later (i.e. `Variable{"myVar", []interface{}{"value"}}` is equivalent to "[myVar:value]")
+	Key string
+	// The parts to be evaluated when it is looked up; this could be a lookup, a string, or similar. It's evaluated like a Node
+	Parts []interface{}
+}
+
+// This represents a substitution, e.g. '#myVar#' or '#[myVar:#sub#]value.s'
 type Substitution struct {
+	// An array of variable declarations that apply to this lookup and it's children
 	Variables []Variable
+	// An array of modifier indexes; ideally this should be functions, but for testing purposes we use indexes
 	Modifiers []int
-	Key       string
+	// The key to lookup and replace this substitution with
+	Key string
 }
 
+// This is the bundled context for a single evaluation.
 type Evaluation struct {
+	// The grammar defined alongside the current evaluation that might be drilled into
 	Grammar map[string][]Node
-	lookup  LookupFunction
-	rand    *rand.Rand
-	out     io.Writer
+
+	// note that these variables are private; this is done mostly to encourage going through the 'WithRandom' interface and to prevent long-lived Evaluations from kicking around
+	// this is a custom lookup function
+	lookup LookupFunction
+	// this is a custom random intreface
+	rand *rand.Rand
+	// this is the output stream
+	out io.Writer
 }
 
+// An evaluation modifier, when passed in to create the evaluation, modifies it's internal state on creation. This can be used to give an optional paramter or some configuration value
 type EvaluationModifier func(*Evaluation)
 
+// This creates a new evaluation context for a specific stream. The modifiers are run in order and sane defaults are provided for optional values
 func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) *Evaluation {
 	e := &Evaluation{
 		Grammar: nil,
@@ -51,20 +70,24 @@ func NewEvaluation(out io.Writer, modifiers ...EvaluationModifier) *Evaluation {
 	return e
 }
 
+// This provides a custom random interface to an evaluation context
 func WithRandom(rand *rand.Rand) EvaluationModifier {
 	return func(e *Evaluation) {
 		e.rand = rand
 	}
 }
 
+// This provides a custom grammar to an evaluation context
 func WithGrammar(g Grammar) EvaluationModifier {
 	return func(e *Evaluation) {
 		e.Grammar = g
 	}
 }
 
+// This is a lookup function; it takes a string that is not found in the existing grammar and returns a string that should be used, or an error if it can't be found
 type LookupFunction func(string) (string, error)
 
+// This provides a custom lookup function to an evaluation context
 func WithLookup(fn LookupFunction) EvaluationModifier {
 	return func(e *Evaluation) {
 		e.lookup = fn
@@ -106,6 +129,7 @@ func (e *Evaluation) clone(out io.Writer, lookups []Variable) *Evaluation {
 	return sube
 }
 
+// This evaluates an entire node, writing it to the underlying stream directly
 func (e *Evaluation) Evaluate(n Node) error {
 	if len(n.Variables) != 0 {
 		e = e.clone(nil, n.Variables)
@@ -114,7 +138,7 @@ func (e *Evaluation) Evaluate(n Node) error {
 		switch v := abstract.(type) {
 		case string:
 			if _, err := e.out.Write([]byte(v)); err != nil {
-				return StreamWriteError{err}
+				return ErrorStreamWrite{err}
 			}
 		case Substitution:
 			var pipe io.Writer
@@ -149,6 +173,7 @@ func (e *Evaluation) Evaluate(n Node) error {
 	return nil
 }
 
+// This evaluates a specific name as if it were looking it up, writing it to the underlying stream directly
 func (e *Evaluation) EvaluateName(name string) (Node, error) {
 	nodes, ok := e.Grammar[name]
 	if !ok || len(nodes) == 0 {
@@ -156,19 +181,21 @@ func (e *Evaluation) EvaluateName(name string) (Node, error) {
 		if e.lookup != nil {
 			value, err := e.lookup(name)
 			if err != nil {
-				return Node{}, LookupError{name, err}
+				return Node{}, ErrorLookup{name, err}
 			}
 			return Node{Parts: []interface{}{value}}, nil
 		} else {
-			return Node{}, NameNotFoundError{name}
+			return Node{}, ErrorNameNotFound{name}
 		}
 	}
 	i := e.rand.Intn(len(nodes))
 	return nodes[i], nil
 }
 
+// This represents a parsed and ready to use grammar
 type Grammar map[string][]Node
 
+// This evaluates and directly streams it out to a specified writer
 func (g Grammar) StreamingEvaluate(out io.Writer, name string, index int, seed int64) error {
 	e := NewEvaluation(out, WithRandom(rand.New(rand.NewSource(seed))), WithGrammar(g))
 
@@ -183,6 +210,7 @@ func (g Grammar) StreamingEvaluate(out io.Writer, name string, index int, seed i
 	return e.Evaluate(n)
 }
 
+// This calls StreamingEvaluate under the hood and buffers it to a string before returning
 func (g Grammar) Evaluate(name string, index int, seed int64) (string, error) {
 	var sb strings.Builder
 	err := g.StreamingEvaluate(&sb, name, index, seed)

@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
+// This represents the 'raw grammar', or unparsed structured values, similar to what would be authored
 type RawGrammar map[string][]string
 
+// This parses and evaluates in a single step using the seed provided
 func (rawg RawGrammar) Evaluate(name string, index int, seed int64) (string, error) {
 
 	g, err := Parse(rawg)
@@ -77,7 +79,7 @@ func toNode(tokens []interface{}) (Node, error) {
 				for i, m := range t.suffixes {
 					modifier, ok := modifierMap[m]
 					if !ok {
-						return n, UnsupportedModifierError{m}
+						return n, ErrorUnsupportedModifier{m}
 					}
 					s.Modifiers[i] = modifier
 				}
@@ -123,7 +125,7 @@ traversal:
 					continue traversal
 				}
 			}
-			return parts, UnmatchedSymbolError{i, "[", "]"}
+			return parts, ErrorUnmatchedSymbol{i, "[", "]"}
 		case '#':
 			if inLookup >= 0 {
 				inLookup = -1
@@ -149,7 +151,7 @@ traversal:
 	}
 
 	if inLookup >= 0 {
-		return nil, UnmatchedSymbolError{inLookup, "#", "#"}
+		return nil, ErrorUnmatchedSymbol{inLookup, "#", "#"}
 	}
 
 	if variableDeclarations != nil {
@@ -180,18 +182,19 @@ func (g *RawGrammar) UnmarshalJSON(data []byte) error {
 				case string:
 					temparr[i] = subv
 				default:
-					return FieldError{fmt.Sprintf("%s[%d]", k, i), ExpectationError{"a string", "something else"}}
+					return ErrorInField{fmt.Sprintf("%s[%d]", k, i), ErrorExpectationFailed{"a string", "something else"}}
 				}
 			}
 			local[k] = temparr
 		default:
-			return FieldError{k, ExpectationError{"either an array of strings or a string", "something else"}}
+			return ErrorInField{k, ErrorExpectationFailed{"either an array of strings or a string", "something else"}}
 		}
 	}
 	*g = local
 	return nil
 }
 
+// This parses the raw grammar into nodes that can be directly used
 func Parse(g RawGrammar) (Grammar, error) {
 	final := make(Grammar)
 	for k, v := range g {
@@ -199,11 +202,11 @@ func Parse(g RawGrammar) (Grammar, error) {
 		for i, raw := range v {
 			tokens, err := tokenize(raw)
 			if err != nil {
-				return final, FieldError{fmt.Sprintf("%s[%d]", k, i), err}
+				return final, ErrorInField{fmt.Sprintf("%s[%d]", k, i), err}
 			}
 			node, err := toNode(tokens)
 			if err != nil {
-				return final, FieldError{fmt.Sprintf("%s[%d]", k, i), err}
+				return final, ErrorInField{fmt.Sprintf("%s[%d]", k, i), err}
 			}
 			nodes = append(nodes, node)
 		}

@@ -47,7 +47,7 @@ func TestEvaluate(t *testing.T) {
 				"hello ",
 				Substitution{
 					Modifiers: []int{
-						ModifierCapitalizeIndex,
+						modifierCapitalizeIndex,
 					},
 					Key: "world",
 				},
@@ -71,7 +71,7 @@ func TestEvaluate(t *testing.T) {
 				"hello ",
 				Substitution{
 					Modifiers: []int{
-						ModifierPastTenseIndex,
+						modifierPastTenseIndex,
 					},
 					Key: "world",
 				},

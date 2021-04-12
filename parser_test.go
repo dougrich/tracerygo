@@ -72,7 +72,7 @@ func TestToNode(t *testing.T) {
 			Substitution{
 				Variables: nil,
 				Modifiers: []int{
-					ModifierCapitalizeIndex,
+					modifierCapitalizeIndex,
 				},
 				Key: "world",
 			},
